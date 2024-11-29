@@ -30,13 +30,11 @@ class MinecraftLauncher:
         # 设置背景色
         self.root.configure(bg='#2b2b2b')
         
-        # 加载配置
+        # 检查并加载配置
         self.config = self.load_config()
-        
-        # 在加载配置后立即自动检测游戏目录
-        if not self.config.get('game_dir'):
-            self.auto_detect_minecraft()
-            
+        if not self.config:  # 如果没有配置文件，则生成默认配置
+            self.create_default_config()
+
         # 状态栏
         self.status_bar = ttk.Label(root, text="就绪", relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
@@ -44,20 +42,6 @@ class MinecraftLauncher:
         # 进度条
         self.progress = ttk.Progressbar(root, length=300, mode='determinate')
         self.progress.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
-        
-        # 设置在线图标
-        try:
-            icon_url = "https://www.helloimg.com/i/2024/11/27/674728eec2b72.ico"
-            response = requests.get(icon_url)
-            icon_data = BytesIO(response.content)
-            icon_image = Image.open(icon_data)
-            icon_photo = ImageTk.PhotoImage(icon_image)
-            
-            # 设置窗口和任务栏图标
-            self.root.iconphoto(True, icon_photo)  # 设置窗口图标
-            self.root.iconbitmap(icon_url)
-        except Exception as e:
-            print(f"无法加载在线图标: {e}")
 
         # 创建主框架和标签页
         self.notebook = ttk.Notebook(self.root)
@@ -77,8 +61,26 @@ class MinecraftLauncher:
 
         # 创建界面
         self.setup_launch_page()
-        self.setup_settings_page()
-        
+        self.setup_settings_page()  # 确保在这里调用
+
+        # 在加载配置后立即自动检测游戏目录
+        if not self.config.get('game_dir'):
+            self.auto_detect_minecraft()  # 确保在这里调用
+
+        # 设置在线图标
+        try:
+            icon_url = "https://www.helloimg.com/i/2024/11/27/674728eec2b72.ico"
+            response = requests.get(icon_url)
+            icon_data = BytesIO(response.content)
+            icon_image = Image.open(icon_data)
+            icon_photo = ImageTk.PhotoImage(icon_image)
+            
+            # 设置窗口和任务栏图标
+            self.root.iconphoto(True, icon_photo)  # 设置窗口图标
+            self.root.iconbitmap(icon_url)
+        except Exception as e:
+            print(f"无法加载在线图标: {e}")
+
         # 在创建界面后刷新版本列表
         self.refresh_versions()
 
@@ -167,7 +169,7 @@ class MinecraftLauncher:
         dir_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=10, padx=10)
         
         ttk.Label(dir_frame, text="游戏目录:", font=('Arial', 10)).grid(row=0, column=0, pady=10, padx=5)
-        self.game_dir = ttk.Entry(dir_frame, width=50, style='primary')
+        self.game_dir = ttk.Entry(dir_frame, width=50, style='primary')  # 确保这里初始化
         self.game_dir.grid(row=0, column=1, pady=10, padx=5)
         self.game_dir.insert(0, self.config.get('game_dir', ''))
         
@@ -187,13 +189,28 @@ class MinecraftLauncher:
         )
         save_btn.grid(row=2, column=0, columnspan=2, pady=20)
 
+    def create_default_config(self):
+        """生成默认配置文件"""
+        default_config = {
+            'username': '',
+            'version': '1.20.4',  # 默认游戏版本
+            'memory': '自动选择',  # 默认内存分配
+            'java_path': '',  # 默认Java路径
+            'game_dir': ''  # 默认游戏目录
+        }
+        
+        with open('launcher_config.json', 'w', encoding='utf-8') as f:
+            json.dump(default_config, f, ensure_ascii=False, indent=2)
+        
+        messagebox.showinfo("信息", "未找到配置文件，已生成默认配置文件。")
+
     def load_config(self):
         try:
             if os.path.exists('launcher_config.json'):
                 with open('launcher_config.json', 'r', encoding='utf-8') as f:
                     return json.load(f)
-        except:
-            pass
+        except Exception as e:
+            print(f"加载配置文件时出错: {e}")
         return {}
 
     def save_config(self):
